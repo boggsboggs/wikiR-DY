@@ -1,7 +1,6 @@
 package mediawiki
 
 import (
-	"encoding/json"
 	"github.com/dyeduguru/wikiracer/wikiclient"
 	"io/ioutil"
 	"net/http"
@@ -26,7 +25,7 @@ func NewMediaWikiClient() wikiclient.Client {
 	}
 }
 
-func (m mediaWikiClient) GetAllLinksInPage(title string) ([]string, error) {
+func (m mediaWikiClient) GetAllLinksFromPage(title string) ([]string, error) {
 	params := map[string]string{
 		"action":  "query",
 		"titles":  title,
@@ -34,28 +33,40 @@ func (m mediaWikiClient) GetAllLinksInPage(title string) ([]string, error) {
 		"prop":    "links",
 		"pllimit": "5000",
 	}
+	return m.getLinksWithContinue(params, "plcontinue", mustParseLinksFromResponse)
+}
 
+func (m mediaWikiClient) GetAllLinksToPage(title string) ([]string, error) {
+	params := map[string]string{
+		"action":  "query",
+		"titles":  title,
+		"format":  "json",
+		"prop":    "linkshere",
+		"lhlimit": "5000",
+	}
+	return m.getLinksWithContinue(params, "lhcontinue", mustParseLinksToResponse)
+}
+
+func (m mediaWikiClient) getLinksWithContinue(
+	params map[string]string,
+	continuePrefix string,
+	parseBodyFunc func([]byte) parsedLinkResponse,
+) ([]string, error) {
 	links := []string{}
 	for {
 		body, err := m.performAction(params)
 		if err != nil {
 			return nil, err
 		}
-		resp := &LinkResponse{}
-		if err := json.Unmarshal(body, resp); err != nil {
-			return nil, err
-		}
-		links = append(links, getLinksFromResponse(resp)...)
-		if resp.Continue.Plcontinue == "" {
+		parsedBody := parseBodyFunc(body)
+		links = append(links, parsedBody.links...)
+
+		if parsedBody.continueValue == "" {
 			break
 		}
-		params["plcontinue"] = resp.Continue.Plcontinue
+		params[continuePrefix] = parsedBody.continueValue
 	}
 	return links, nil
-}
-
-func (m mediaWikiClient) GetAllLinksInURL(url string) ([]string, error) {
-	return nil, nil
 }
 
 func (m mediaWikiClient) performAction(params map[string]string) ([]byte, error) {

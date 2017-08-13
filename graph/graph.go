@@ -1,5 +1,7 @@
 package graph
 
+import "fmt"
+
 type Node struct {
 	Title     string
 	Neighbors map[*Node]struct{}
@@ -68,7 +70,8 @@ func newNode(title string) *Node {
 }
 
 func reverse(s []string) {
-	for i := 0; i <= len(s)/2; i++ {
+	for i := 0; i < len(s)/2; i++ {
 		s[i], s[len(s)-i-1] = s[len(s)-i-1], s[i]
 	}
+	fmt.Println()
 }

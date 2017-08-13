@@ -14,7 +14,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	startTime := time.Now()
-	path, err := wikiRacer.RaceWithTitle(ctx, "Portola", "Nene Raju Nene Mantri")
+	path, err := wikiRacer.RaceWithTitle(ctx, "Boyapati Srinu", "Palo Alto")
 	if err != nil {
 		panic(err)
 	}

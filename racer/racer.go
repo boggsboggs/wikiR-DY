@@ -3,6 +3,7 @@ package racer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/dyeduguru/wikiracer/graph"
 	"github.com/dyeduguru/wikiracer/wikiclient"
 	"strings"
@@ -63,15 +64,26 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
 	if src == dst {
 		return []string{src, dst}
 	}
-	go g.explore(ctx, src, g.leftCh)
-	go g.explore(ctx, dst, g.rightCh)
+	go g.explore(ctx, src, g.leftCh, true)
+	go g.explore(ctx, dst, g.rightCh, false)
 
 	for {
 		select {
 		case e := <-g.leftCh:
 			srcNode, dstNode := g.handleEdge(e, g.leftFrontier)
 			if _, ok := g.rightFrontier[dstNode]; ok {
-				return append(g.graph.Path(g.graph.LookUp[src], srcNode), reverse(g.graph.Path(g.graph.LookUp[dst], dstNode))...)
+				fmt.Printf("Path from %s to %s: ", g.graph.LookUp[src].Title, srcNode.Title)
+				srcToLFrontier := g.graph.Path(g.graph.LookUp[src], srcNode)
+				for _, title := range srcToLFrontier {
+					fmt.Printf("%s ", title)
+				}
+				fmt.Println()
+				rFrontierToDst := reverse(g.graph.Path(g.graph.LookUp[dst], dstNode))
+				for _, title := range rFrontierToDst {
+					fmt.Printf("%s ", title)
+				}
+				fmt.Println()
+				return append(srcToLFrontier, rFrontierToDst...)
 			}
 			if dstNode.Title == dst {
 				return g.graph.Path(g.graph.LookUp[src], dstNode)
@@ -85,7 +97,7 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
 				return reverse(g.graph.Path(g.graph.LookUp[dst], dstNode))
 			}
 		case <-ctx.Done():
-			return nil
+			panic(errors.New("timed out"))
 		}
 	}
 }
@@ -99,7 +111,7 @@ func (g graphRacer) handleEdge(e edge, frontier map[*graph.Node]struct{}) (*grap
 	return srcNode, dstNode
 }
 
-func (g graphRacer) explore(ctx context.Context, start string, ch chan edge) {
+func (g graphRacer) explore(ctx context.Context, start string, ch chan edge, isForward bool) {
 	q := []string{start}
 	visited := map[string]bool{}
 	for {
@@ -113,10 +125,20 @@ func (g graphRacer) explore(ctx context.Context, start string, ch chan edge) {
 			cur := q[0]
 			q = q[1:]
 			visited[cur] = true
-			titles, err := g.wikiClient.GetAllLinksInPage(cur)
-			if err != nil {
-				panic(err)
+			var titles []string
+			var err error
+			if isForward {
+				titles, err = g.wikiClient.GetAllLinksFromPage(cur)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				titles, err = g.wikiClient.GetAllLinksToPage(cur)
+				if err != nil {
+					panic(err)
+				}
 			}
+
 			for _, title := range titles {
 				if shouldIgnoreTitle(title) {
 					continue
