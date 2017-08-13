@@ -28,6 +28,7 @@ func TestGraphRacer_RaceWithTitle(t *testing.T) {
 		src, dst        string
 		getMockedClient func() *mocks.Client
 		expectedPath    []string
+		errorString     string
 	}{
 		{
 			getMockedClient: defaultMockedClientFunc,
@@ -52,10 +53,17 @@ func TestGraphRacer_RaceWithTitle(t *testing.T) {
 			src:             "foo",
 			dst:             "quxx",
 			expectedPath:    []string{},
+			errorString:     "No path",
 		},
 	} {
 		racer := racer.NewGraphRacer(tc.getMockedClient())
 		path, err := racer.RaceWithTitle(ctx, tc.src, tc.dst)
+		if tc.errorString != "" {
+			if err.Error() != tc.errorString {
+				t.Errorf("Expected error string %s, but got %s", tc.errorString, err.Error())
+			}
+			continue
+		}
 		if err != nil {
 			t.Error(err.Error())
 		}

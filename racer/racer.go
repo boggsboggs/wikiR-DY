@@ -36,6 +36,8 @@ func NewGraphRacer(client wikiclient.Client) Racer {
 		rightCh:       make(chan edge),
 		leftFrontier:  make(map[*graph.Node]struct{}),
 		rightFrontier: make(map[*graph.Node]struct{}),
+		rightFinish:   make(chan struct{}),
+		leftFinish:    make(chan struct{}),
 	}
 }
 
@@ -47,28 +49,28 @@ type graphRacer struct {
 	leftFrontier  map[*graph.Node]struct{}
 	rightCh       chan edge
 	leftCh        chan edge
+	rightFinish   chan struct{}
+	leftFinish    chan struct{}
 }
 
 func (g graphRacer) RaceWithTitle(ctx context.Context, start, end string) ([]string, error) {
-	return g.race(ctx, start, end), nil
+	return g.race(ctx, start, end)
 }
 
 func (g graphRacer) RaceWithURL(ctx context.Context, start, end string) ([]string, error) {
 	return nil, errors.New("Unimplemented")
 }
 
-func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
-	if src == dst {
-		return []string{src}
-	}
+func (g graphRacer) race(parentCtx context.Context, src, dst string) ([]string, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 	if src == dst {
-		return []string{src, dst}
+		return []string{src}, nil
 	}
-	go g.explore(ctx, src, g.leftCh, true)
-	go g.explore(ctx, dst, g.rightCh, false)
+	go g.explore(ctx, src, g.leftCh, g.leftFinish, true)
+	go g.explore(ctx, dst, g.rightCh, g.rightFinish, false)
 
+	rightFinish, leftFinish := false, false
 	for {
 		select {
 		case e := <-g.leftCh:
@@ -76,23 +78,30 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
 			if _, ok := g.rightFrontier[dstNode]; ok {
 				srcToLFrontier := g.graph.Path(g.graph.LookUp[src], srcNode)
 				rFrontierToDst := g.graph.Path(dstNode, g.graph.LookUp[dst])
-				return append(srcToLFrontier, rFrontierToDst...)
+				return append(srcToLFrontier, rFrontierToDst...), nil
 			}
 			if dstNode.Title == dst {
-				return g.graph.Path(g.graph.LookUp[src], dstNode)
+				return g.graph.Path(g.graph.LookUp[src], dstNode), nil
 			}
 		case e := <-g.rightCh:
 			srcNode, dstNode := g.handleEdge(e, g.rightFrontier)
 			if _, ok := g.leftFrontier[dstNode]; ok {
 				srcToLFrontier := g.graph.Path(g.graph.LookUp[src], dstNode)
 				rFrontierToDst := g.graph.Path(srcNode, g.graph.LookUp[dst])
-				return append(srcToLFrontier, rFrontierToDst...)
+				return append(srcToLFrontier, rFrontierToDst...), nil
 			}
 			if dstNode.Title == src {
-				return g.graph.Path(dstNode, g.graph.LookUp[dst])
+				return g.graph.Path(dstNode, g.graph.LookUp[dst]), nil
 			}
+		case <-g.leftFinish:
+			leftFinish = true
+		case <-g.rightFinish:
+			rightFinish = true
 		case <-ctx.Done():
-			panic(errors.New("timed out"))
+			return nil, errors.New("timed out")
+		}
+		if rightFinish && leftFinish {
+			return nil, errors.New("No path")
 		}
 	}
 }
@@ -106,7 +115,13 @@ func (g graphRacer) handleEdge(e edge, frontier map[*graph.Node]struct{}) (*grap
 	return srcNode, dstNode
 }
 
-func (g graphRacer) explore(ctx context.Context, start string, ch chan edge, isForward bool) {
+func (g graphRacer) explore(
+	ctx context.Context,
+	start string,
+	ch chan edge,
+	finishCh chan struct{},
+	isForward bool,
+) {
 	q := []string{start}
 	visited := map[string]bool{}
 	for {
@@ -115,6 +130,7 @@ func (g graphRacer) explore(ctx context.Context, start string, ch chan edge, isF
 			return
 		default:
 			if len(q) == 0 {
+				finishCh <- struct{}{}
 				return
 			}
 			cur := q[0]
