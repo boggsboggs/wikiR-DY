@@ -32,6 +32,11 @@ type edge struct {
 	src, dst string
 }
 
+var (
+	TimedOutError = errors.New("Timed out")
+	NoPathError   = errors.New("No path")
+)
+
 func NewGraphRacer(client wikiclient.Client) Racer {
 	return graphRacer{
 		wikiClient:    client,
@@ -102,10 +107,10 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) ([]string, 
 		case <-g.rightFinish:
 			rightFinish = true
 		case <-ctx.Done():
-			return nil, errors.New("timed out")
+			return nil, TimedOutError
 		}
 		if rightFinish && leftFinish {
-			return nil, errors.New("No path")
+			return nil, NoPathError
 		}
 	}
 }

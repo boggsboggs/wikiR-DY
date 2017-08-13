@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/dyeduguru/wikiracer/server"
 	"github.com/spf13/cobra"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,29 +29,7 @@ func main() {
 		Use:   "race",
 		Short: "Run the race",
 		Run: func(cmd *cobra.Command, args []string) {
-			resp, err := http.Get(fmt.Sprintf("http://localhost:8080/race/%s/%s", startPage, endPage))
-			if err != nil {
-				panic(err)
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				panic(err)
-			}
-			var parsedResponse Response
-			if err := json.Unmarshal(body, &parsedResponse); err != nil {
-				panic(err)
-			}
-			fmt.Printf("Path: ")
-			for i, item := range parsedResponse.Path {
-				if i == len(parsedResponse.Path)-1 {
-					fmt.Printf("%s", item)
-				} else {
-					fmt.Printf("%s -> ", item)
-				}
-			}
-			fmt.Println()
-			fmt.Printf("Time Taken: %f seconds\n", parsedResponse.TimeTaken)
+			runRace(startPage, endPage, cmd.OutOrStdout())
 		},
 	}
 	cmdRace.Flags().StringVarP(&startPage, "start", "s", "Mike Tyson", "page to start the race")
@@ -58,4 +37,30 @@ func main() {
 	var rootCmd = &cobra.Command{Use: "wikiracer"}
 	rootCmd.AddCommand(cmdServer, cmdRace)
 	rootCmd.Execute()
+}
+
+func runRace(startPage, endPage string, w io.Writer) {
+	resp, err := http.Get(fmt.Sprintf("http://localhost:8080/race/%s/%s", startPage, endPage))
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	var parsedResponse Response
+	if err := json.Unmarshal(body, &parsedResponse); err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(w, "Path: ")
+	for i, item := range parsedResponse.Path {
+		if i == len(parsedResponse.Path)-1 {
+			fmt.Fprintf(w, "%s", item)
+		} else {
+			fmt.Fprintf(w, "%s -> ", item)
+		}
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "Time Taken: %f seconds\n", parsedResponse.TimeTaken)
 }
