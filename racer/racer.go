@@ -3,7 +3,6 @@ package racer
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/dyeduguru/wikiracer/graph"
 	"github.com/dyeduguru/wikiracer/wikiclient"
 	"strings"
@@ -59,6 +58,9 @@ func (g graphRacer) RaceWithURL(ctx context.Context, start, end string) ([]strin
 }
 
 func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
+	if src == dst {
+		return []string{src}
+	}
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
 	if src == dst {
@@ -72,17 +74,8 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
 		case e := <-g.leftCh:
 			srcNode, dstNode := g.handleEdge(e, g.leftFrontier)
 			if _, ok := g.rightFrontier[dstNode]; ok {
-				fmt.Printf("Path from %s to %s: ", g.graph.LookUp[src].Title, srcNode.Title)
 				srcToLFrontier := g.graph.Path(g.graph.LookUp[src], srcNode)
-				for _, title := range srcToLFrontier {
-					fmt.Printf("%s ", title)
-				}
-				fmt.Println()
-				rFrontierToDst := reverse(g.graph.Path(g.graph.LookUp[dst], dstNode))
-				for _, title := range rFrontierToDst {
-					fmt.Printf("%s ", title)
-				}
-				fmt.Println()
+				rFrontierToDst := g.graph.Path(dstNode, g.graph.LookUp[dst])
 				return append(srcToLFrontier, rFrontierToDst...)
 			}
 			if dstNode.Title == dst {
@@ -91,10 +84,12 @@ func (g graphRacer) race(parentCtx context.Context, src, dst string) []string {
 		case e := <-g.rightCh:
 			srcNode, dstNode := g.handleEdge(e, g.rightFrontier)
 			if _, ok := g.leftFrontier[dstNode]; ok {
-				return append(g.graph.Path(g.graph.LookUp[src], dstNode), reverse(g.graph.Path(g.graph.LookUp[dst], srcNode))...)
+				srcToLFrontier := g.graph.Path(g.graph.LookUp[src], dstNode)
+				rFrontierToDst := g.graph.Path(srcNode, g.graph.LookUp[dst])
+				return append(srcToLFrontier, rFrontierToDst...)
 			}
 			if dstNode.Title == src {
-				return reverse(g.graph.Path(g.graph.LookUp[dst], dstNode))
+				return g.graph.Path(dstNode, g.graph.LookUp[dst])
 			}
 		case <-ctx.Done():
 			panic(errors.New("timed out"))
@@ -160,11 +155,4 @@ func shouldIgnoreTitle(title string) bool {
 		}
 	}
 	return false
-}
-
-func reverse(s []string) []string {
-	for i := 0; i <= len(s)/2; i++ {
-		s[i], s[len(s)-i-1] = s[len(s)-i-1], s[i]
-	}
-	return s
 }
