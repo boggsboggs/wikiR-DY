@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dyeduguru/wikiracer/racer"
 	"github.com/dyeduguru/wikiracer/wikiclient/mediawiki"
 	"github.com/gorilla/mux"
@@ -15,15 +16,16 @@ const (
 	endVar   = "end"
 )
 
-type response struct {
-	path      []string
-	timeTaken time.Duration
+type Response struct {
+	Path      []string `json:"path"`
+	TimeTaken float64  `json:"timeTaken"`
 }
 
 func RaceWithTitles(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	start := vars[startVar]
 	end := vars[endVar]
+	fmt.Printf("Got request with start: %s and end: %s", start, end)
 	wikiClient := mediawiki.NewMediaWikiClient()
 	wikiRacer := racer.NewGraphRacer(wikiClient)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -33,9 +35,10 @@ func RaceWithTitles(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	if err := json.NewEncoder(w).Encode(response{
-		path:      path,
-		timeTaken: time.Since(startTime),
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(&Response{
+		Path:      path,
+		TimeTaken: time.Since(startTime).Seconds(),
 	}); err != nil {
 		panic(err)
 	}
