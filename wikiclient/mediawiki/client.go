@@ -31,7 +31,7 @@ func (m mediaWikiClient) GetAllLinksFromPage(title string) ([]string, error) {
 		"titles":  title,
 		"format":  "json",
 		"prop":    "links",
-		"pllimit": "5000",
+		"pllimit": "500",
 	}
 	return m.getLinksWithContinue(params, "plcontinue", mustParseLinksFromResponse)
 }
@@ -42,7 +42,7 @@ func (m mediaWikiClient) GetAllLinksToPage(title string) ([]string, error) {
 		"titles":  title,
 		"format":  "json",
 		"prop":    "linkshere",
-		"lhlimit": "5000",
+		"lhlimit": "500",
 	}
 	return m.getLinksWithContinue(params, "lhcontinue", mustParseLinksToResponse)
 }

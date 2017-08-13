@@ -13,9 +13,13 @@ var (
 	titlePrefixesToIgnore = map[string]struct{}{
 		"Help:":                              {},
 		"Wikipedia:":                         {},
+		"Wikipedia talk:":                    {},
 		"International Standard Book Number": {},
 		"Template":                           {},
 		"Category":                           {},
+		"User:":                              {},
+		"User talk:":                         {},
+		"Talk:":                              {},
 	}
 )
 

@@ -1,6 +1,8 @@
 package mediawiki
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type LinksFromResponse struct {
 	Continue struct {
