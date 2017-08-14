@@ -18,7 +18,29 @@ How to run
 * `cd /path/to/wikiracer`
 * `go install ./...`
 * `$GOPATH/bin/wikiracer server` to start the server
-* `$GOPATH/bin/wikiracer query --start <start title> --end <end-title>`
+* For page titles: `$GOPATH/bin/wikiracer query --start <start-title> --end <end-title>`
+* For page URLs: `$GOPATH/bin/wikiracer query --url --start <start-title> --end <end-title>`
+
+REST API
+--------
+ * `GET /race/<startTitle>/<endTitle>`
+
+```
+{
+path: ["path", "from", "start", "to", "end"],
+timeTaken: <inSeconds>,
+error: ""
+}
+```
+ * `GET /race/url/<base64EncodedstartURL>/<base64EncodedEndURL>`
+
+```
+{
+path: ["path", "from", "start", "to", "end"],
+timeTaken: <inSeconds>,
+error: ""
+}
+```
 
 Time spent
 ---------- 

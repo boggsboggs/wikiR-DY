@@ -11,5 +11,9 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Path(fmt.Sprintf("/race/{%s}/{%s}", startVar, endVar)).
 		HandlerFunc(RaceWithTitles)
+	router.
+		Methods("GET").
+		Path(fmt.Sprintf("/race/url/{%s}/{%s}", startVar, endVar)).
+		HandlerFunc(RaceWithURLs)
 	return router
 }

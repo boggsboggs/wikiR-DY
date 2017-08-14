@@ -33,8 +33,9 @@ type edge struct {
 }
 
 var (
-	TimedOutError = errors.New("Timed out")
-	NoPathError   = errors.New("No path")
+	TimedOutError   = errors.New("Timed out")
+	NoPathError     = errors.New("No path")
+	InvalidURLError = errors.New("Invalid URL")
 )
 
 func NewGraphRacer(client wikiclient.Client) Racer {
@@ -66,8 +67,16 @@ func (g graphRacer) RaceWithTitle(ctx context.Context, start, end string) ([]str
 	return g.race(ctx, start, end)
 }
 
-func (g graphRacer) RaceWithURL(ctx context.Context, start, end string) ([]string, error) {
-	return nil, errors.New("Unimplemented")
+func (g graphRacer) RaceWithURL(ctx context.Context, startURL, endURL string) ([]string, error) {
+	start, err := getTitle(startURL)
+	if err != nil {
+		return nil, err
+	}
+	end, err := getTitle(endURL)
+	if err != nil {
+		return nil, err
+	}
+	return g.race(ctx, start, end)
 }
 
 func (g graphRacer) race(parentCtx context.Context, src, dst string) ([]string, error) {
@@ -180,4 +189,12 @@ func shouldIgnoreTitle(title string) bool {
 		}
 	}
 	return false
+}
+
+func getTitle(url string) (string, error) {
+	urlPrefix := "https://en.wikipedia.org/wiki/"
+	if !strings.HasPrefix(url, urlPrefix) {
+		return "", errors.New("Invalid link")
+	}
+	return strings.TrimPrefix(url, urlPrefix), nil
 }
