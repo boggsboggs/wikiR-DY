@@ -15,7 +15,8 @@ High level architecture
 How to run
 ----------
 * Install go
-* `cd /path/to/wikiracer`
+* Extract the tar into `$GOPATH/src/github.com/dyeduguru/wikiracer`
+* `cd $GOPATH/src/github.com/dyeduguru/wikiracer`
 * `go install ./...`
 * `$GOPATH/bin/wikiracer server` to start the server
 * For page titles: `$GOPATH/bin/wikiracer query --start <start-title> --end <end-title>`
@@ -45,5 +46,5 @@ error: ""
 Time spent
 ---------- 
 * MediaWiki client: 2 hours
-* Racer and graph: 5 hours
-* Server and client: 1 hour
+* Racer and graph: 6 hours
+* Server and client: 3 hour
